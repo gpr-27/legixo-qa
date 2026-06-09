@@ -5,10 +5,11 @@ for every request.
 """
 
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 import groq
 from fastapi import Depends, FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from google.genai import errors as genai_errors
 from langgraph.errors import GraphRecursionError
 from pinecone.exceptions import PineconeException
@@ -21,6 +22,7 @@ from .settings import get_settings
 
 _FALLBACK_RECURSION_LIMIT = 12
 _UPSTREAM_ERRORS = (groq.APIError, genai_errors.APIError, PineconeException)
+_UI_FILE = Path(__file__).resolve().parent / "static" / "index.html"
 
 
 @asynccontextmanager
@@ -42,6 +44,12 @@ app = FastAPI(title="Legixo Q&A", version="1.0.0", lifespan=lifespan)
 
 def get_graph(request: Request):
     return request.app.state.graph
+
+
+@app.get("/", include_in_schema=False)
+def home():
+    """Serve the minimal chat UI (it just calls POST /ask)."""
+    return FileResponse(_UI_FILE)
 
 
 @app.get("/health")

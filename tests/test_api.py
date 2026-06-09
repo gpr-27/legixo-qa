@@ -38,3 +38,11 @@ def test_overlong_question_is_rejected(make_client):
 def test_health(make_client):
     client = make_client({"answer": "", "citations": [], "steps": []})
     assert client.get("/health").json() == {"status": "ok"}
+
+
+def test_home_serves_ui(make_client):
+    client = make_client({"answer": "", "citations": [], "steps": []})
+    r = client.get("/")
+    assert r.status_code == 200
+    assert "text/html" in r.headers["content-type"]
+    assert "Legixo" in r.text

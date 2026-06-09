@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Legixo Q&amp;A</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,560;9..144,640&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Spline+Sans+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --paper:   #f3ede0;
+      --paper-2: #fbf8f1;
+      --ink:     #20242e;
+      --ink-soft:#5b606c;
+      --accent:  #7d2b2b;
+      --accent-2:#9a3b32;
+      --line:    #d8cdb8;
+      --gold:    #ab8a52;
+      --good:    #3f6b4f;
+      --shadow:  0 1px 0 #fff inset, 0 18px 40px -28px rgba(32,36,46,.5);
+    }
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        radial-gradient(120% 90% at 80% -10%, #fbf7ee 0%, rgba(251,247,238,0) 55%),
+        radial-gradient(80% 70% at -10% 110%, #efe7d6 0%, rgba(239,231,214,0) 60%),
+        var(--paper);
+      font-family: "Newsreader", Georgia, serif;
+      font-size: 18px;
+      line-height: 1.6;
+      letter-spacing: .005em;
+    }
+    .wrap { max-width: 760px; margin: 0 auto; padding: 56px 24px 96px; }
+
+    /* Header */
+    header { animation: rise .7s ease both; }
+    .seal {
+      display: inline-flex; align-items: center; gap: 10px;
+      font-family: "Spline Sans Mono", monospace;
+      font-size: 11px; letter-spacing: .28em; text-transform: uppercase;
+      color: var(--accent); margin-bottom: 14px;
+    }
+    .seal::before {
+      content: ""; width: 26px; height: 1px; background: var(--accent); opacity: .6;
+    }
+    h1 {
+      font-family: "Fraunces", serif;
+      font-weight: 640; font-size: clamp(40px, 7vw, 66px);
+      line-height: .98; margin: 0; letter-spacing: -.01em;
+    }
+    h1 .amp { font-style: italic; color: var(--accent); font-weight: 560; }
+    .tagline {
+      margin: 14px 0 0; max-width: 46ch;
+      color: var(--ink-soft); font-size: 18px;
+    }
+    .rule { height: 1px; background: var(--line); margin: 30px 0 26px; }
+
+    /* Ask box */
+    form { animation: rise .7s .08s ease both; }
+    .field-label {
+      font-family: "Spline Sans Mono", monospace;
+      font-size: 11px; letter-spacing: .22em; text-transform: uppercase;
+      color: var(--ink-soft); display: block; margin-bottom: 10px;
+    }
+    .ask {
+      background: var(--paper-2);
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      box-shadow: var(--shadow);
+      padding: 6px 6px 6px 18px;
+      display: flex; align-items: flex-end; gap: 10px;
+      transition: border-color .2s ease, box-shadow .2s ease;
+    }
+    .ask:focus-within { border-color: var(--gold); box-shadow: 0 1px 0 #fff inset, 0 0 0 3px rgba(171,138,82,.16); }
+    textarea {
+      flex: 1; border: 0; background: transparent; resize: none;
+      font: inherit; color: var(--ink); padding: 12px 0; max-height: 160px;
+      outline: none; line-height: 1.5;
+    }
+    textarea::placeholder { color: #a59c89; }
+    button.send {
+      flex: none; align-self: stretch;
+      font-family: "Spline Sans Mono", monospace;
+      font-size: 12px; letter-spacing: .12em; text-transform: uppercase;
+      color: #f7efe2; background: var(--accent);
+      border: 0; border-radius: 3px; padding: 0 20px; min-height: 46px;
+      cursor: pointer; transition: background .18s ease, transform .05s ease;
+    }
+    button.send:hover { background: var(--accent-2); }
+    button.send:active { transform: translateY(1px); }
+    button.send:disabled { opacity: .55; cursor: progress; }
+
+    .controls {
+      display: flex; align-items: center; gap: 18px; margin-top: 12px;
+      font-size: 14px; color: var(--ink-soft);
+    }
+    .toggle { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }
+    .toggle input { accent-color: var(--accent); width: 15px; height: 15px; }
+
+    /* Example chips */
+    .examples { margin-top: 20px; }
+    .examples-label {
+      font-family: "Spline Sans Mono", monospace; font-size: 10.5px;
+      letter-spacing: .2em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 10px;
+    }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chip {
+      font: inherit; font-size: 14.5px;
+      background: transparent; color: var(--ink);
+      border: 1px solid var(--line); border-radius: 999px;
+      padding: 6px 14px; cursor: pointer; text-align: left;
+      transition: border-color .18s ease, background .18s ease, color .18s ease;
+    }
+    .chip:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* Answer */
+    #out { margin-top: 34px; }
+    .entry { animation: rise .5s ease both; margin-bottom: 30px; }
+    .q {
+      font-family: "Fraunces", serif; font-weight: 560; font-size: 22px;
+      line-height: 1.25; margin: 0 0 14px; letter-spacing: -.005em;
+    }
+    .q::before { content: "Q."; color: var(--accent); margin-right: 8px; font-style: italic; }
+    .answer {
+      position: relative;
+      background: var(--paper-2); border: 1px solid var(--line);
+      border-left: 3px solid var(--accent); border-radius: 3px;
+      padding: 20px 22px; box-shadow: var(--shadow);
+    }
+    .answer.refusal { border-left-color: var(--gold); color: var(--ink-soft); font-style: italic; }
+    .answer p { margin: 0; }
+
+    .sources-label {
+      font-family: "Spline Sans Mono", monospace; font-size: 11px;
+      letter-spacing: .2em; text-transform: uppercase; color: var(--ink-soft);
+      margin: 22px 0 12px;
+    }
+    .cite {
+      border: 1px solid var(--line); border-radius: 3px; background: #fdfbf6;
+      padding: 13px 16px; margin-bottom: 10px;
+    }
+    .cite-head {
+      display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; margin-bottom: 6px;
+    }
+    .cite-file {
+      font-family: "Spline Sans Mono", monospace; font-size: 13px;
+      color: var(--accent); word-break: break-all;
+    }
+    .cite-sec { font-size: 14px; color: var(--ink-soft); }
+    .score {
+      margin-left: auto; font-family: "Spline Sans Mono", monospace;
+      font-size: 11px; letter-spacing: .04em; color: var(--good);
+      border: 1px solid #cdebd5; background: #eef6ef; border-radius: 999px; padding: 2px 9px;
+    }
+    .snippet { font-size: 15.5px; color: var(--ink-soft); line-height: 1.5; }
+
+    /* Trace */
+    .trace { margin-top: 18px; display: flex; flex-wrap: wrap; gap: 8px; }
+    .step {
+      font-family: "Spline Sans Mono", monospace; font-size: 11.5px;
+      color: var(--ink-soft); background: #efe8d8; border-radius: 3px; padding: 4px 9px;
+    }
+    .step + .step { position: relative; }
+
+    .meta { font-size: 13.5px; color: #9a917e; margin-top: 8px; }
+    .err {
+      border: 1px solid #e3c4bd; background: #faeee9; color: var(--accent);
+      border-radius: 3px; padding: 14px 16px;
+    }
+
+    /* Thinking */
+    .thinking { display: inline-flex; gap: 5px; align-items: center; color: var(--ink-soft); font-style: italic; }
+    .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); opacity: .5; animation: blink 1.1s infinite; }
+    .dot:nth-child(2){ animation-delay: .15s } .dot:nth-child(3){ animation-delay: .3s }
+
+    footer {
+      margin-top: 60px; padding-top: 20px; border-top: 1px solid var(--line);
+      font-size: 13px; color: #9a917e; display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+    }
+    footer a { color: var(--accent); text-decoration: none; border-bottom: 1px solid transparent; }
+    footer a:hover { border-bottom-color: var(--accent); }
+
+    @keyframes rise { from { opacity: 0; transform: translateY(10px) } to { opacity: 1; transform: none } }
+    @keyframes blink { 0%, 100% { opacity: .25 } 50% { opacity: 1 } }
+    @media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header>
+      <span class="seal">Legixo Thinklabs &middot; fictional corpus</span>
+      <h1>Legixo&nbsp;Q<span class="amp">&amp;</span>A</h1>
+      <p class="tagline">Ask a question and get an answer drawn only from the case
+        documents — with the exact source cited. If the files don't say it, it says so.</p>
+    </header>
+
+    <div class="rule"></div>
+
+    <form id="form" autocomplete="off">
+      <label class="field-label" for="q">Ask the documents</label>
+      <div class="ask">
+        <textarea id="q" rows="1" placeholder="e.g. What is the notice period at Bluecrest?"></textarea>
+        <button class="send" id="send" type="submit">Ask</button>
+      </div>
+      <div class="controls">
+        <label class="toggle"><input type="checkbox" id="trace" /> show reasoning</label>
+      </div>
+
+      <div class="examples">
+        <div class="examples-label">Try one</div>
+        <div class="chips" id="chips"></div>
+      </div>
+    </form>
+
+    <section id="out" aria-live="polite"></section>
+
+    <footer>
+      <span>All parties, courts, and facts are fiction.</span>
+      <a href="/docs" target="_blank" rel="noopener">API docs &rarr;</a>
+    </footer>
+  </main>
+
+  <script>
+    const EXAMPLES = [
+      "What is the notice period at Bluecrest?",
+      "When is the next hearing in Arvind Mehta v. Northfield?",
+      "What interest rate applies to delayed payments under Section 22?",
+      "Can the tenant sublet the Harbor View unit?",
+      "What is the population of Riverside city?",
+    ];
+
+    const q = document.getElementById("q");
+    const out = document.getElementById("out");
+    const send = document.getElementById("send");
+    const traceToggle = document.getElementById("trace");
+
+    // Build example chips.
+    const chips = document.getElementById("chips");
+    for (const text of EXAMPLES) {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "chip"; b.textContent = text;
+      b.addEventListener("click", () => { q.value = text; submit(); });
+      chips.appendChild(b);
+    }
+
+    // Auto-grow the textarea; Enter submits, Shift+Enter newlines.
+    q.addEventListener("input", () => { q.style.height = "auto"; q.style.height = q.scrollHeight + "px"; });
+    q.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(); }
+    });
+    document.getElementById("form").addEventListener("submit", (e) => { e.preventDefault(); submit(); });
+
+    function el(tag, cls, text) {
+      const n = document.createElement(tag);
+      if (cls) n.className = cls;
+      if (text != null) n.textContent = text;
+      return n;
+    }
+
+    async function submit() {
+      const question = q.value.trim();
+      if (!question) return;
+
+      send.disabled = true;
+      out.innerHTML = "";
+      const entry = el("div", "entry");
+      entry.appendChild(el("p", "q", question));
+      const thinking = el("div", "thinking");
+      thinking.append("consulting the documents", el("span", "dot"), el("span", "dot"), el("span", "dot"));
+      entry.appendChild(thinking);
+      out.appendChild(entry);
+
+      try {
+        const url = "/ask" + (traceToggle.checked ? "?trace=true" : "");
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ question }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          render(entry, { error: data.detail || ("Request failed (" + res.status + ")") });
+        } else {
+          render(entry, data);
+        }
+      } catch (err) {
+        render(entry, { error: "Could not reach the server. Is it running?" });
+      } finally {
+        send.disabled = false;
+      }
+    }
+
+    function render(entry, data) {
+      entry.querySelector(".thinking")?.remove();
+
+      if (data.error) {
+        entry.appendChild(el("div", "err", data.error));
+        return;
+      }
+
+      const noCites = !data.citations || data.citations.length === 0;
+      const answer = el("div", "answer" + (noCites ? " refusal" : ""));
+      answer.appendChild(el("p", null, data.answer));
+      entry.appendChild(answer);
+
+      if (!noCites) {
+        entry.appendChild(el("div", "sources-label", "Sources"));
+        for (const c of data.citations) {
+          const cite = el("div", "cite");
+          const head = el("div", "cite-head");
+          head.appendChild(el("span", "cite-file", c.source));
+          if (c.chunk_id && c.chunk_id.includes("#")) {
+            head.appendChild(el("span", "cite-sec", c.chunk_id.split("#")[1].replace(/-/g, " ")));
+          }
+          if (typeof c.score === "number") {
+            head.appendChild(el("span", "score", "sim " + c.score.toFixed(2)));
+          }
+          cite.appendChild(head);
+          if (c.snippet) cite.appendChild(el("div", "snippet", c.snippet));
+          entry.appendChild(cite);
+        }
+      } else {
+        entry.appendChild(el("div", "meta", "No matching passage — answer not found in the corpus."));
+      }
+
+      if (data.trace && data.trace.length) {
+        const trace = el("div", "trace");
+        for (const step of data.trace) trace.appendChild(el("span", "step", step));
+        entry.appendChild(trace);
+      }
+    }
+  </script>
+</body>
+</html>

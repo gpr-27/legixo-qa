@@ -70,7 +70,10 @@ them with metadata. See the **Pinecone checklist** below.
 uvicorn app.main:app --reload
 ```
 
-Interactive docs at <http://localhost:8000/docs>.
+- **Web UI** — open <http://localhost:8000/> to ask questions in the browser.
+- **Interactive API docs** — <http://localhost:8000/docs>.
+
+![Web UI](docs/ui_answer.png)
 
 ## 6. Ask questions
 
@@ -155,7 +158,8 @@ skipped unless API keys are set.
 
 ```
 app/
-  main.py        FastAPI app + /ask + /health
+  main.py        FastAPI app + /ask + /health + web UI at /
+  static/        single-page chat UI (vanilla HTML/CSS/JS, no build step)
   graph.py       LangGraph: retrieve -> grade -> branch -> generate / refine / give up
   retrieval.py   embed query + Pinecone search + score floor
   llm.py         grounded answer, relevance grader, query rewrite, citation guard
