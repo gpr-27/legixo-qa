@@ -1,0 +1,19 @@
+# Core graph + serving
+langgraph>=1.0,<2.0
+fastapi>=0.115
+uvicorn[standard]>=0.30
+pydantic>=2.7
+pydantic-settings>=2.3
+
+# Providers
+pinecone>=7,<9           # the current package — NOT the deprecated `pinecone-client`
+google-genai>=1.0        # the current Gemini SDK — NOT `google-generativeai`
+groq>=0.11
+
+# Utilities
+numpy>=1.26
+python-dotenv>=1.0
+
+# Dev / eval
+httpx>=0.27
+pytest>=8.0
