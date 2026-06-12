@@ -32,7 +32,8 @@ class Settings(BaseSettings):
     # Retrieval / graph behaviour.
     top_k: int = 4
     score_threshold: float = 0.55   # cosine floor for a "good" match; tune on the eval set
-    max_loops: int = 2              # query rewrites before giving up
+    query_fanout: int = 3           # reworded query variants per search (original is added too)
+    max_loops: int = 2              # broadened retries before giving up
 
 
 @lru_cache

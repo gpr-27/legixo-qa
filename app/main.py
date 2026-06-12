@@ -4,6 +4,7 @@ The clients and the compiled graph are built once at startup (lifespan) and reus
 for every request.
 """
 
+import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -20,6 +21,7 @@ from .llm import REFUSAL
 from .schemas import AskRequest, AskResponse
 from .settings import get_settings
 
+_log = logging.getLogger(__name__)
 _FALLBACK_RECURSION_LIMIT = 12
 _UPSTREAM_ERRORS = (groq.APIError, genai_errors.APIError, PineconeException)
 _UI_FILE = Path(__file__).resolve().parent / "static" / "index.html"
@@ -34,8 +36,8 @@ async def lifespan(app: FastAPI):
     groq = clients.get_groq(settings)
 
     app.state.graph = build_graph(index, embedder, groq, settings)
-    # recursion_limit counts super-steps, so keep it well above max_loops.
-    app.state.recursion_limit = settings.max_loops * 3 + 5
+    # recursion_limit counts super-steps; keep it well above the expand + per-loop nodes.
+    app.state.recursion_limit = settings.max_loops * 3 + 7
     yield
 
 
@@ -63,7 +65,7 @@ def ask(req: AskRequest, trace: bool = False, graph=Depends(get_graph)):
     # FastAPI runs this in its threadpool and the event loop is never blocked.
     initial = {
         "question": req.question,
-        "query": req.question,
+        "queries": [],
         "documents": [],
         "answer": "",
         "citations": [],
@@ -78,6 +80,7 @@ def ask(req: AskRequest, trace: bool = False, graph=Depends(get_graph)):
         final = {"answer": REFUSAL, "citations": [], "steps": ["recursion_limit_hit"]}
     except _UPSTREAM_ERRORS as exc:
         # A provider/network failure — distinct from a bug, which we let surface as 500.
+        _log.warning("upstream error on /ask: %s", exc)
         return JSONResponse(
             status_code=503,
             content={"detail": f"upstream service error: {type(exc).__name__}"},

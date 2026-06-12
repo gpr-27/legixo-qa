@@ -8,11 +8,14 @@ import time
 
 import numpy as np
 from google import genai
+from google.genai import errors as genai_errors
 from google.genai import types
 from groq import Groq
 from pinecone import Pinecone, ServerlessSpec
 
 from .settings import Settings
+
+_RETRIES = 5
 
 
 def get_pinecone(settings: Settings) -> Pinecone:
@@ -44,7 +47,8 @@ def get_index(pc: Pinecone, settings: Settings):
 
 
 def get_groq(settings: Settings) -> Groq:
-    return Groq(api_key=settings.groq_api_key)
+    # max_retries lets the SDK back off and retry on free-tier 429s automatically.
+    return Groq(api_key=settings.groq_api_key, max_retries=_RETRIES)
 
 
 class Embedder:
@@ -66,18 +70,32 @@ class Embedder:
         return self._embed([text], task_type="RETRIEVAL_QUERY")[0]
 
     def _embed(self, texts: list[str], task_type: str) -> list[list[float]]:
-        response = self._client.models.embed_content(
-            model=self._model,
-            contents=texts,
-            config=types.EmbedContentConfig(
-                task_type=task_type, output_dimensionality=self._dim
-            ),
+        response = self._call_with_backoff(
+            lambda: self._client.models.embed_content(
+                model=self._model,
+                contents=texts,
+                config=types.EmbedContentConfig(
+                    task_type=task_type, output_dimensionality=self._dim
+                ),
+            )
         )
         if len(response.embeddings) != len(texts):
             raise RuntimeError(
                 f"expected {len(texts)} embeddings, got {len(response.embeddings)}"
             )
         return [_normalise(e.values) for e in response.embeddings]
+
+    @staticmethod
+    def _call_with_backoff(call):
+        """Retry the Gemini call on rate-limit / server errors with exponential backoff."""
+        for attempt in range(_RETRIES):
+            try:
+                return call()
+            except genai_errors.APIError as exc:
+                transient = isinstance(exc, genai_errors.ServerError) or "RESOURCE_EXHAUSTED" in str(exc)
+                if not transient or attempt == _RETRIES - 1:
+                    raise
+                time.sleep(2 ** attempt)  # 1, 2, 4, 8s
 
 
 def _normalise(values) -> list[float]:

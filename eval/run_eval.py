@@ -10,9 +10,13 @@ metrics: citation correctness, fact recall (in-corpus), and abstain correctness
 import argparse
 import json
 import re
+import time
 from pathlib import Path
 
 import httpx
+
+# Small pause between questions so a full run stays under the free-tier rate limits.
+_PACING_SECONDS = 1.5
 
 HERE = Path(__file__).resolve().parent
 _REFUSAL_HINTS = ("cannot find", "not found", "cannot answer", "no information")
@@ -35,6 +39,7 @@ def run(url: str) -> None:
     cite_ok = fact_ok = abstain_ok = n_in = n_out = 0
 
     for case in cases:
+        time.sleep(_PACING_SECONDS)  # stay under the free-tier rate limits
         resp = httpx.post(f"{url}/ask", json={"question": case["question"]},
                           timeout=60).json()
         answer = resp.get("answer", "")

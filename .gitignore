@@ -9,3 +9,7 @@ __pycache__/
 
 # Eval output (regenerate with eval/run_eval.py)
 eval/results.md
+
+# macOS
+.DS_Store
+**/.DS_Store

@@ -19,9 +19,19 @@ _GRADER_SYSTEM = (
     "Return an empty list if none are relevant."
 )
 
+_EXPAND_SYSTEM = (
+    "You turn a user's question into several short search queries for a semantic "
+    "search over legal-style documents. Make them diverse: use synonyms, the formal "
+    "or statutory phrasing, and the key parties/terms likely written in the documents. "
+    "Each query is a short phrase, not a sentence; no quotes or surrounding punctuation. "
+    'Reply as JSON: {"queries": [<query strings>]}.'
+)
+
 _ANSWER_SYSTEM = (
     "You answer questions using ONLY the numbered context chunks provided.\n"
     "- Use only facts found in the chunks; never use outside knowledge and never guess.\n"
+    "- Answer fully: include the relevant conditions, amounts, dates, and obligations "
+    "from the chunks, not just a one-word reply.\n"
     "- Cite the chunk_id of every chunk you relied on.\n"
     "- If the chunks cover the topic but not the specific detail asked, state what the "
     "documents do say and that the detail is not given — do not invent it.\n"
@@ -66,20 +76,22 @@ def grade_relevance(groq, settings, question: str, chunks: list[dict]) -> list[d
     return [c for i, c in enumerate(chunks, 1) if i in keep]
 
 
-def rewrite_query(groq, settings, question: str, attempt: int) -> str:
-    """Reformulate the question into a fresh search query after a failed attempt."""
-    user = (
-        f"A document search for the question below returned nothing useful "
-        f"(attempt {attempt}). Rewrite it as a focused search query using the wording "
-        f"likely found in the documents. Return only the rewritten query.\n\n"
-        f"Question: {question}"
+def generate_search_queries(groq, settings, question: str, broaden: bool = False) -> list[str]:
+    """Turn the question into several diverse search queries (one LLM call).
+
+    With ``broaden=True`` it is asked for wider, more general phrasings — used by the
+    fallback after the first wide search found nothing.
+    """
+    n = settings.query_fanout
+    hint = (
+        " The first search found nothing, so go broader: more general terms, "
+        "alternative wordings, and related concepts."
+        if broaden else ""
     )
-    response = groq.chat.completions.create(
-        model=settings.answer_model,
-        temperature=0,
-        messages=[{"role": "user", "content": user}],
-    )
-    return response.choices[0].message.content.strip()
+    user = f"Generate {n} search queries for this question.{hint}\n\nQuestion: {question}"
+    data = _chat_json(groq, settings.answer_model, _EXPAND_SYSTEM, user)
+    queries = [str(q).strip() for q in (data.get("queries") or []) if str(q).strip()]
+    return queries[:n]
 
 
 def generate_answer(groq, settings, question: str, chunks: list[dict]):

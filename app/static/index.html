@@ -167,6 +167,63 @@
     }
     .step + .step { position: relative; }
 
+    /* Flow — "behind the scenes": a vertical docket of the nodes that actually ran */
+    .flow { margin-top: 26px; border-top: 1px dashed var(--line); padding-top: 20px; }
+    .flow-title {
+      font-family: "Spline Sans Mono", monospace;
+      font-size: 11px; letter-spacing: .2em; text-transform: uppercase;
+      color: var(--ink-soft); display: flex; align-items: center; gap: 10px; margin-bottom: 20px;
+    }
+    .flow-time {
+      margin-left: auto; text-transform: none; letter-spacing: .04em;
+      font-size: 11.5px; color: var(--gold);
+    }
+    .flow-steps { list-style: none; margin: 0; padding: 0; }
+
+    .fnode { position: relative; padding: 0 0 20px 36px; }
+    .fnode::before {                       /* connector rail down to the next node */
+      content: ""; position: absolute; left: 9px; top: 6px; bottom: -6px;
+      width: 2px; background: var(--line);
+    }
+    .fnode:last-child::before { display: none; }
+    .fnode::after {                        /* node dot, colour-coded per step */
+      content: ""; position: absolute; left: 4px; top: 4px;
+      width: 12px; height: 12px; border-radius: 50%;
+      background: var(--paper-2); border: 2px solid var(--gold);
+      box-shadow: 0 0 0 4px var(--paper);
+    }
+    .fnode--good::after   { border-color: var(--good); }
+    .fnode--accent::after { border-color: var(--accent); }
+    .fnode--gold::after   { border-color: var(--gold); }
+    .fnode--neutral::after{ border-color: var(--ink-soft); }
+
+    .fnode-head { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; }
+    .fnode-ico { font-family: "Spline Sans Mono", monospace; font-size: 13px; color: var(--ink-soft); }
+    .fnode-name { font-family: "Fraunces", serif; font-weight: 560; font-size: 18px; letter-spacing: -.005em; }
+    .fnode-tag {
+      font-family: "Spline Sans Mono", monospace; font-size: 11px; letter-spacing: .03em;
+      color: var(--good); border: 1px solid #cdebd5; background: #eef6ef;
+      border-radius: 999px; padding: 1px 9px;
+    }
+    .fnode--accent .fnode-tag { color: var(--accent); border-color: #e3c4bd; background: #faeee9; }
+    .fnode--gold   .fnode-tag { color: #8a6d35;       border-color: #e6d8b8; background: #f6efdd; }
+    .fnode--neutral .fnode-tag { color: var(--ink-soft); border-color: var(--line); background: #efe8d8; }
+    .fnode-desc { color: var(--ink-soft); font-size: 15px; line-height: 1.5; margin-top: 4px; max-width: 60ch; }
+    .fnode-extra {
+      font-family: "Spline Sans Mono", monospace; font-size: 12px; color: var(--ink);
+      background: #efe8d8; border-radius: 3px; padding: 5px 10px; margin-top: 9px;
+      display: inline-block; max-width: 100%; word-break: break-word;
+    }
+    .fnode-extra + .fnode-extra { margin-top: 5px; }
+    .fbranch {
+      position: relative; padding: 2px 0 16px 36px; margin-top: -8px;
+      font-style: italic; font-size: 14px; color: var(--gold);
+    }
+    .fbranch::before {
+      content: ""; position: absolute; left: 9px; top: -6px; bottom: 4px; width: 2px; background: var(--line);
+    }
+    .fnode, .fbranch { animation: rise .45s ease both; }
+
     .meta { font-size: 13.5px; color: #9a917e; margin-top: 8px; }
     .err {
       border: 1px solid #e3c4bd; background: #faeee9; color: var(--accent);
@@ -208,7 +265,7 @@
         <button class="send" id="send" type="submit">Ask</button>
       </div>
       <div class="controls">
-        <label class="toggle"><input type="checkbox" id="trace" /> show reasoning</label>
+        <label class="toggle"><input type="checkbox" id="trace" /> show raw steps</label>
       </div>
 
       <div class="examples">
@@ -276,8 +333,9 @@
       out.appendChild(entry);
 
       try {
-        const url = "/ask" + (traceToggle.checked ? "?trace=true" : "");
-        const res = await fetch(url, {
+        // Always ask for the trace — the flow visualization is built from it.
+        const t0 = performance.now();
+        const res = await fetch("/ask?trace=true", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ question }),
@@ -286,6 +344,7 @@
         if (!res.ok) {
           render(entry, { error: data.detail || ("Request failed (" + res.status + ")") });
         } else {
+          data._ms = Math.round(performance.now() - t0);
           render(entry, data);
         }
       } catch (err) {
@@ -329,10 +388,136 @@
       }
 
       if (data.trace && data.trace.length) {
-        const trace = el("div", "trace");
-        for (const step of data.trace) trace.appendChild(el("span", "step", step));
-        entry.appendChild(trace);
+        renderFlow(entry, data.trace, data._ms);     // always: the visual pipeline
+        if (traceToggle.checked) {                   // optional: the raw step strings
+          const trace = el("div", "trace");
+          for (const step of data.trace) trace.appendChild(el("span", "step", step));
+          entry.appendChild(trace);
+        }
       }
+    }
+
+    /* ---- Flow visualization -------------------------------------------------
+       The backend returns the graph's trace — one string per node that ran, e.g.
+       "retrieve(query='...') -> 2 hits", "grade -> kept 1/2", "generate". We parse
+       those back into structured steps and draw the path the agent actually took. */
+
+    const SCORE_FLOOR = 0.55;   // mirrors settings.score_threshold
+
+    const NODE_META = {
+      expand: {
+        name: "Expand", ico: "⋔", color: "neutral",
+        tag: (d) => d.count + (d.count === 1 ? " query" : " queries"),
+        desc: () => `Turned the question into several diverse search queries — the original plus reworded variants — to widen the net in one pass.`,
+        extra: (d) => d.queries,
+      },
+      retrieve: {
+        name: "Retrieve", ico: "⌕", color: "neutral",
+        tag: (d) => d.hits + (d.hits === 1 ? " passage" : " passages"),
+        desc: (d) => {
+          const how = d.nq === 1 ? "the query" : `all ${d.nq} queries`;
+          return d.hits
+            ? `Searched the Pinecone index with ${how} and pooled the matches — ${d.hits} unique passage${d.hits === 1 ? "" : "s"} cleared the ${SCORE_FLOOR} similarity floor.`
+            : `Searched the Pinecone index with ${how} — nothing cleared the ${SCORE_FLOOR} similarity floor.`;
+        },
+        extra: () => null,
+      },
+      grade: {
+        name: "Grade", ico: "✓", color: "gold",
+        tag: (d) => `kept ${d.kept}/${d.total}`,
+        desc: (d) => d.total
+          ? `An LLM read each pooled passage and judged which actually answer the question — kept ${d.kept} of ${d.total}.`
+          : `Nothing was retrieved, so there was nothing to grade.`,
+        extra: () => null,
+      },
+      refine: {
+        name: "Refine", ico: "↻", color: "accent",
+        tag: (d) => `attempt ${d.attempt}`,
+        desc: () => `The wide search still found nothing — an LLM generated broader, synonym-rich queries and looped back to retrieve.`,
+        extra: (d) => d.queries,
+      },
+      generate: {
+        name: "Generate", ico: "✎", color: "good",
+        tag: () => "grounded",
+        desc: () => `Wrote the answer using only the kept passages, then dropped any citation not backed by a retrieved chunk.`,
+        extra: () => null,
+      },
+      give_up: {
+        name: "Abstain", ico: "∅", color: "gold",
+        tag: () => "no answer",
+        desc: () => `Out of retries with no relevant passage — returned the honest "I cannot find this in the documents."`,
+        extra: () => null,
+      },
+    };
+
+    // After grading, the router branches one of three ways — narrate which.
+    const BRANCH = {
+      generate: "relevant context found — drafting the answer",
+      refine:   "the wide search found nothing — broadening and retrying",
+      give_up:  "no relevant context and out of retries — abstaining",
+    };
+
+    function splitQueries(s) {
+      return s ? s.split(" | ").map((q) => q.trim()).filter(Boolean) : [];
+    }
+
+    function parseTrace(steps) {
+      const nodes = [];
+      for (const s of steps) {
+        let m;
+        if ((m = s.match(/^expand -> (\d+) quer(?:y|ies)(?: \[(.*)\])?$/)))
+          nodes.push({ type: "expand", count: +m[1], queries: splitQueries(m[2]) });
+        else if ((m = s.match(/^retrieve\((\d+) quer(?:y|ies)\) -> (\d+) hits$/)))
+          nodes.push({ type: "retrieve", nq: +m[1], hits: +m[2] });
+        else if ((m = s.match(/^grade -> kept (\d+)\/(\d+)$/)))
+          nodes.push({ type: "grade", kept: +m[1], total: +m[2] });
+        else if ((m = s.match(/^refine\(attempt=(\d+)\) -> (\d+) broadened quer(?:y|ies)(?: \[(.*)\])?$/)))
+          nodes.push({ type: "refine", attempt: +m[1], count: +m[2], queries: splitQueries(m[3]) });
+        else if (s === "generate") nodes.push({ type: "generate" });
+        else if (s === "give_up" || s === "recursion_limit_hit") nodes.push({ type: "give_up" });
+      }
+      return nodes;
+    }
+
+    function renderFlow(entry, steps, ms) {
+      const nodes = parseTrace(steps);
+      if (!nodes.length) return;
+
+      const flow = el("div", "flow");
+      const title = el("div", "flow-title");
+      title.appendChild(el("span", null, "Behind the scenes"));
+      if (typeof ms === "number") title.appendChild(el("span", "flow-time", (ms / 1000).toFixed(1) + "s"));
+      flow.appendChild(title);
+
+      const list = el("ol", "flow-steps");
+      let tick = 0;
+      const reveal = (node) => { node.style.animationDelay = (tick++ * 0.14) + "s"; return node; };
+
+      nodes.forEach((n, i) => {
+        const meta = NODE_META[n.type];
+        if (!meta) return;
+
+        const li = el("li", "fnode fnode--" + meta.color);
+        const head = el("div", "fnode-head");
+        head.appendChild(el("span", "fnode-ico", meta.ico));
+        head.appendChild(el("span", "fnode-name", meta.name));
+        const tag = meta.tag(n);
+        if (tag) head.appendChild(el("span", "fnode-tag", tag));
+        li.appendChild(head);
+        li.appendChild(el("div", "fnode-desc", meta.desc(n)));
+        const extra = meta.extra(n);
+        for (const q of [].concat(extra || []))
+          li.appendChild(el("div", "fnode-extra", "“" + q + "”"));
+        list.appendChild(reveal(li));
+
+        if (n.type === "grade") {                 // show the router's decision
+          const label = BRANCH[(nodes[i + 1] || {}).type];
+          if (label) list.appendChild(reveal(el("li", "fbranch", label)));
+        }
+      });
+
+      flow.appendChild(list);
+      entry.appendChild(flow);
     }
   </script>
 </body>

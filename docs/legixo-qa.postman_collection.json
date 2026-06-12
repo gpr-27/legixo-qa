@@ -1,0 +1,72 @@
+{
+  "info": {
+    "name": "Legixo Q&A API",
+    "description": "Grounded Q&A over the legal-style corpus. Set the `baseUrl` variable (default http://localhost:8000), start the server, and send the requests.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8000" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/health", "host": ["{{baseUrl}}"], "path": ["health"] }
+      }
+    },
+    {
+      "name": "Ask — answerable (notice period)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": { "raw": "{{baseUrl}}/ask", "host": ["{{baseUrl}}"], "path": ["ask"] },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"question\": \"What is the notice period at Bluecrest?\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Ask — answerable (sublet)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": { "raw": "{{baseUrl}}/ask", "host": ["{{baseUrl}}"], "path": ["ask"] },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"question\": \"Can the tenant sublet the Harbor View unit?\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Ask — unanswerable (abstains)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": { "raw": "{{baseUrl}}/ask", "host": ["{{baseUrl}}"], "path": ["ask"] },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"question\": \"What is the population of Riverside city?\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Ask — with graph trace (?trace=true)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": {
+          "raw": "{{baseUrl}}/ask?trace=true",
+          "host": ["{{baseUrl}}"],
+          "path": ["ask"],
+          "query": [{ "key": "trace", "value": "true" }]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"question\": \"When is the next hearing in Arvind Mehta v. Northfield?\"\n}"
+        }
+      }
+    }
+  ]
+}
