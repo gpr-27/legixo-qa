@@ -10,7 +10,7 @@ vector index — none require a credit card).
 
 > The corpus in `corpus/` is fiction (made-up parties and courts) from the take-home brief.
 
-**Demo video (5–10 min):** _add link here_ — install → ingest → start the API → call
+**Demo video (5–10 min):** [Watch on Google Drive](https://drive.google.com/file/d/1f33mJukHB6mvinsfefsol7HLVz3ZU1-0/view?usp=sharing) — install → ingest → start the API → call
 `/ask` (curl + Postman + web UI) → a few good answers with citations → one question the
 documents can't answer → a walk through the LangGraph layout.
 
